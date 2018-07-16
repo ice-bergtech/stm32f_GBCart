@@ -33,4 +33,5 @@ Temporary Items
 
 .vscode/
 .cortex-debug.*
-
+*.gb
+*.elf
