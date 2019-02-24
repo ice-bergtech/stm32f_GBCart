@@ -8,9 +8,8 @@
   ******************************************************************************
   */ 
 
-#include "stm32f4_discovery.h"
-#include "stm32f4xx_spi.h"
-
+// #include "stm32f4_discovery.h"
+#include "stm32f4xx_usart.h"
 
 GPIO_InitTypeDef  GPIO_InitStructure;
 
@@ -121,40 +120,6 @@ void config_gpio_dbg(void) {
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
 }
 
-void config_spi2_init(void){
-	/* GPIOB and SPI2 clock enable */
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB,ENABLE);
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2,ENABLE);
-
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;  // PB13(SCK),PB14(MISO),PB15(MOSI)
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-	GPIO_PinAFConfig(GPIOB, GPIO_PinSource13, GPIO_AF_SPI2);
-	GPIO_PinAFConfig(GPIOB, GPIO_PinSource14, GPIO_AF_SPI2);
-	GPIO_PinAFConfig(GPIOB, GPIO_PinSource15, GPIO_AF_SPI2);
- 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;        // PB12(NSS)
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-	SPI_InitTypeDef SPI_InitStructure;
-	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-	SPI_InitStructure.SPI_Mode      = SPI_Mode_Master;
-	SPI_InitStructure.SPI_DataSize  = SPI_DataSize_8b;
-	SPI_InitStructure.SPI_CPOL      = SPI_CPOL_High;
-	SPI_InitStructure.SPI_CPHA      = SPI_CPHA_1Edge;
-	SPI_InitStructure.SPI_NSS       = SPI_NSS_Soft;
-	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_256;
-	SPI_InitStructure.SPI_FirstBit  = SPI_FirstBit_MSB;
-
-	SPI_Init(SPI2 , &SPI_InitStructure);
-	SPI_Cmd(SPI2,ENABLE);
-}
 
 int main(void) {
 	/* PE{8..15} */
@@ -169,7 +134,55 @@ int main(void) {
 	*/
 	config_PC0_int();
 	/* PB{12..15} for external flash rom */
-	config_spi2_init();
+
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
+
+	//GPIO初期化用構造体を作る
+	GPIO_InitTypeDef GPIO_InitStructure;
+
+	//GPIOAのPIN2をオルタネィテブファンクションのUSART2に割り当て
+	GPIO_PinAFConfig(GPIOA , GPIO_PinSource2 , GPIO_AF_USART2);
+	GPIO_PinAFConfig(GPIOA , GPIO_PinSource3 , GPIO_AF_USART2);
+	//GPIOAのPIN2を出力に設定
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3; 
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF; 
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP; 
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP; 
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz; 
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	// GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3 ;
+	// GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	// GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	// GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+	//USART初期化用構造体を作る
+	USART_InitTypeDef USART_InitStructure;
+
+	//USART2を9600bps,8bit,ストップビット1,パリティなし,フロー制御なし,送受信有効に設定
+	USART_InitStructure.USART_BaudRate = 115200;
+	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+	USART_InitStructure.USART_StopBits = USART_StopBits_1;
+	USART_InitStructure.USART_Parity = USART_Parity_No;
+	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+	USART_Init(USART2, &USART_InitStructure);
+
+	NVIC_InitTypeDef NVIC_InitStruct;
+	NVIC_InitStruct.NVIC_IRQChannel = USART2_IRQn;
+	/* Set priority */
+	NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x08;
+	/* Set sub priority */
+	NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x00;
+	/* Enable interrupt */
+	NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+	/* Add to NVIC */
+	NVIC_Init(&NVIC_InitStruct);
+	USART_ClearITPendingBit(USART2, USART_IT_RXNE);
+	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE); 
+
+	//USART2を有効化
+	USART_Cmd(USART2, ENABLE);
 
 	/* Set initial cartridge settings */
 	rom_bank = 0x01;

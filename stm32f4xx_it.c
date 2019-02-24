@@ -11,7 +11,6 @@
   */ 
 
 #include "stm32f4xx_it.h"
-#include "stm32f4_discovery.h"
 #include "repeat.h"
 
 //#include "roms/tetris_rom.h"
@@ -30,7 +29,13 @@
 //#include "roms/organizer_rom.h"
 //#include "roms/organizer_sav.h"
 //#include "roms/demonblood_rom.h"
-#include "roms/joul_rom.h"
+// #include "roms/joul_rom.h"
+// #include "nanoloop_demo.h"
+// #include "keytest.h"
+#include "lsdj_682.h"
+// #include "mychara2.h"
+// #include "dangan.h"
+// #include "pixelboy.h"
 #include "dhole2_logo.h"
 
 
@@ -49,39 +54,40 @@
 /* Defines wether to show the Nintendo logo or the custom logo */
 uint8_t no_show_logo;
 
-uint8_t rom_bank; 
+uint16_t rom_bank = 0x01; 
 uint8_t ram_bank;
 uint8_t ram_enable;
 uint8_t rom_ram_mode;
 
 uint8_t ram[0x8000]; // 32K
-
+uint8_t ram_uart_ptr = 0x00;
 
 /* Write cartridge operation for MBC1 */
 inline void mbc1_write(uint16_t addr, uint8_t data) {
-	if (addr >= 0xA000 && addr < 0xC000) {
- 		/* 8KB RAM Bank 00-03, if any */
-		ram[addr - 0xA000 + 0x2000 * ram_bank] = data;
-	}
-	/*if (addr < 0x2000) {
+	if (addr < 0x2000) {
 		if (data) {
 			ram_enable = 1;
 		} else {
 			ram_enable = 0;
 		}
-	}*/ else if (addr >= 0x2000 && addr < 0x4000) {
+	} else if (addr >= 0x2000 && addr < 0x3000) {
 		/* ROM Bank Number */
-		data &= 0x1F;
-		rom_bank = (rom_bank & 0xE0) | data;
+		rom_bank = data;
 		if (data == 0x00) {
-			rom_bank |= 0x01;
+			// rom_bank |= 0x01;
+		}
+	} else if (addr >= 0x3000 && addr < 0x4000) {
+		if(data){
+			rom_bank = 0x0100 + (rom_bank & 0x00FF);
+		} else {
+			rom_bank = 0x0000 + (rom_bank & 0x00FF);
 		}
 	} else if (addr < 0x6000) {
 		/*RAM Bank Number - or - Upper Bits of ROM Bank Number */
 		if (rom_ram_mode) {
 			/* ROM mode */
 			data &= 0x07;
-			rom_bank = (rom_bank & 0x1F) | (data << 5);
+			// rom_bank = (rom_bank & 0x1F) | (data << 5);
 		} else {
 			/* RAM mode */
 			ram_bank = data & 0x03;
@@ -96,6 +102,14 @@ inline void mbc1_write(uint16_t addr, uint8_t data) {
 			rom_ram_mode = 1;
 		}
 	}
+	else if (addr >= 0xA000 && addr < 0xC000) {
+ 		/* 8KB RAM Bank 00-03, if any */
+		ram[addr - 0xA000 + 0x2000 * ram_bank] = data;
+		if(addr == 0xA000){
+			USART_SendData(USART2, ram[0]);
+		}
+	}
+
 }
 
 /* Read cartridge operation for MBC1 */
@@ -114,7 +128,13 @@ inline uint8_t mbc1_read(uint16_t addr) {
 		}
 	} else if (addr < 0x8000) {
 		/* 16KB ROM Bank 01-7F */
-		return rom_gb[addr + 0x4000 * (rom_bank - 1)];
+		// return rom_gb[addr + 0x4000 * (rom_bank - 1)];
+		unsigned int bankaddr = addr + 0x4000 * (rom_bank-1);
+		if(bankaddr<rom_gb_len){
+			return rom_gb[bankaddr];
+		} else {
+			return 0xFF;
+		}
 	} else if (addr >= 0xA000 && addr < 0xC000) {
 		/* 8KB RAM Bank 00-03, if any */
 		return ram[addr - 0xA000 + 0x2000 * ram_bank];
@@ -165,4 +185,14 @@ void EXTI0_IRQHandler(void) {
 	/* Clear interrupt flag */
 	EXTI->PR = EXTI_Line0;
 	//EXTI_ClearITPendingBit(EXTI_Line0);
+}
+
+void USART2_IRQHandler(void) {
+	uint16_t i=2;
+	if(USART_GetITStatus(USART2, USART_IT_RXNE) == SET) {
+		i=USART_ReceiveData(USART2); //受信したデータ読み込み
+		USART_SendData(USART2, i); //そのデータを送信
+	}
+	ram[ram_uart_ptr+0x0010] = (uint8_t)i;
+	ram_uart_ptr++;
 }

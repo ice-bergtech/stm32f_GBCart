@@ -6,15 +6,15 @@ SRCS=main.c system_stm32f4xx.c stm32f4xx_it.c
 
 # Library modules
 SRCS += stm32f4xx_exti.c stm32f4xx_gpio.c stm32f4xx_rcc.c stm32f4xx_syscfg.c
-SRCS += stm32f4xx_tim.c misc.c
-SRCS += stm32f4_discovery.c
+SRCS += stm32f4xx_tim.c stm32f4xx_usart.c misc.c
+# SRCS += stm32f4_discovery.c
 
 # Binaries will be generated with this name (.elf, .bin, .hex, etc)
 PROJ_NAME=gbcart
 
 #######################################################################################
 
-STM_COMMON=../../..
+STM_COMMON=/Users/yusuke/Documents/STM32/STM32F4-Discovery_FW_V1.1.0
 
 CC=arm-none-eabi-gcc
 OBJCOPY=arm-none-eabi-objcopy
@@ -26,7 +26,7 @@ CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
 CFLAGS += -I.
 
 # Include files from STM libraries
-CFLAGS += -I$(STM_COMMON)/Utilities/STM32F4-Discovery
+# CFLAGS += -I$(STM_COMMON)/Utilities/STM32F4-Discovery
 CFLAGS += -I$(STM_COMMON)/Libraries/CMSIS/Include 
 CFLAGS += -I$(STM_COMMON)/Libraries/CMSIS/ST/STM32F4xx/Include
 CFLAGS += -I$(STM_COMMON)/Libraries/STM32F4xx_StdPeriph_Driver/inc
