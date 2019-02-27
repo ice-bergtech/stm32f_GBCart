@@ -32,7 +32,7 @@
 // #include "roms/joul_rom.h"
 // #include "nanoloop_demo.h"
 // #include "keytest.h"
-#include "lsdj_682.h"
+// #include "lsdj_682_full.h"
 // #include "mychara2.h"
 // #include "dangan.h"
 // #include "pixelboy.h"
@@ -59,7 +59,7 @@ uint8_t ram_bank;
 uint8_t ram_enable;
 uint8_t rom_ram_mode;
 
-uint8_t ram[0x8000]; // 32K
+uint8_t ram[0x20000]; // 32K
 uint8_t ram_uart_ptr = 0x00;
 
 /* Write cartridge operation for MBC1 */
@@ -96,10 +96,10 @@ inline void mbc1_write(uint16_t addr, uint8_t data) {
 		/* ROM/RAM Mode Select */
 		if (data) { 
 			/* Emable RAM Banking mode */
-			rom_ram_mode = 0;
+			rom_ram_mode = 1;
 		} else { 
 			/* Emable ROM Banking mode */
-			rom_ram_mode = 1;
+			rom_ram_mode = 0;
 		}
 	}
 	else if (addr >= 0xA000 && addr < 0xC000) {
@@ -118,7 +118,8 @@ inline uint8_t mbc1_read(uint16_t addr) {
 		/* 16KB ROM bank 00 */
 		if (no_show_logo) {
 			/* Custom logo disabled */
-			return rom_gb[addr];
+			// return rom_gb[addr];
+			return *((uint8_t *)(0x08100000+addr));
 		} else {
 			/* Custom logo enabled, only during first read at boot */
 			if (addr == 0x133) {
@@ -130,11 +131,7 @@ inline uint8_t mbc1_read(uint16_t addr) {
 		/* 16KB ROM Bank 01-7F */
 		// return rom_gb[addr + 0x4000 * (rom_bank - 1)];
 		unsigned int bankaddr = addr + 0x4000 * (rom_bank-1);
-		if(bankaddr<rom_gb_len){
-			return rom_gb[bankaddr];
-		} else {
-			return 0xFF;
-		}
+		return *((uint8_t *)(0x08100000+bankaddr));
 	} else if (addr >= 0xA000 && addr < 0xC000) {
 		/* 8KB RAM Bank 00-03, if any */
 		return ram[addr - 0xA000 + 0x2000 * ram_bank];

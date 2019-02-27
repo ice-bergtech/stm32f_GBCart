@@ -22,7 +22,6 @@ extern uint8_t ram_enable;
 extern uint8_t rom_ram_mode;
 extern uint8_t *ram;
 
-
 /* Configure GPIO PC0 to trigger interrupt on rise */
 void config_PC0_int(void) {
 	EXTI_InitTypeDef EXTI_InitStruct;
@@ -185,7 +184,7 @@ int main(void) {
 	USART_Cmd(USART2, ENABLE);
 
 	/* Set initial cartridge settings */
-	rom_bank = 0x01;
+	rom_bank = 0x00;
 	ram_bank = 0x00;
 	ram_enable = 0x00;
 	rom_ram_mode = 0x00;
