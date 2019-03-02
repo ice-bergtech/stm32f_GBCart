@@ -38,6 +38,7 @@
 // #include "pixelboy.h"
 #include "dhole2_logo.h"
 
+#define GB_ROM_ADDR 0x08100000
 
 /* 
  * Macros to relate the GPIO and the functionality
@@ -119,7 +120,7 @@ inline uint8_t mbc1_read(uint16_t addr) {
 		if (no_show_logo) {
 			/* Custom logo disabled */
 			// return rom_gb[addr];
-			return *((uint8_t *)(0x08100000+addr));
+			return *((uint8_t *)(GB_ROM_ADDR+addr));
 		} else {
 			/* Custom logo enabled, only during first read at boot */
 			if (addr == 0x133) {
@@ -131,7 +132,7 @@ inline uint8_t mbc1_read(uint16_t addr) {
 		/* 16KB ROM Bank 01-7F */
 		// return rom_gb[addr + 0x4000 * (rom_bank - 1)];
 		unsigned int bankaddr = addr + 0x4000 * (rom_bank-1);
-		return *((uint8_t *)(0x08100000+bankaddr));
+		return *((uint8_t *)(GB_ROM_ADDR+bankaddr));
 	} else if (addr >= 0xA000 && addr < 0xC000) {
 		/* 8KB RAM Bank 00-03, if any */
 		return ram[addr - 0xA000 + 0x2000 * ram_bank];
