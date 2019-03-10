@@ -6,7 +6,7 @@
   * @brief   Main Program body.
   *          Initialization of the GPIOs.
   ******************************************************************************
-  */ 
+  */
 
 // #include "stm32f4_discovery.h"
 #include "stm32f4xx_usart.h"
@@ -21,6 +21,7 @@ extern uint8_t ram_bank;
 extern uint8_t ram_enable;
 extern uint8_t rom_ram_mode;
 extern uint8_t *ram;
+
 
 /* Configure GPIO PC0 to trigger interrupt on rise */
 void config_PC0_int(void) {
@@ -57,17 +58,51 @@ void config_PC0_int(void) {
 	NVIC_Init(&NVIC_InitStruct);
 }
 
+void config_PC3_int(void) {
+	EXTI_InitTypeDef EXTI_InitStruct;
+	NVIC_InitTypeDef NVIC_InitStruct;
+
+	/* Enable clock for SYSCFG */
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+
+	/* Tell system that you will use PC0 for EXTI_Line0 */
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource3);
+
+	/* PC0 is connected to EXTI_Line0 */
+	EXTI_InitStruct.EXTI_Line = EXTI_Line3;
+	/* Enable interrupt */
+	EXTI_InitStruct.EXTI_LineCmd = ENABLE;
+	/* Interrupt mode */
+	EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;
+	/* Triggers on rising and falling edge */
+	EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Falling;
+	/* Add to EXTI */
+	EXTI_Init(&EXTI_InitStruct);
+
+	/* Add IRQ vector to NVIC */
+	/* PC0 is connected to EXTI_Line0, which has EXTI0_IRQn vector */
+	NVIC_InitStruct.NVIC_IRQChannel = EXTI3_IRQn;
+	/* Set priority */
+	NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x00;
+	/* Set sub priority */
+	NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x00;
+	/* Enable interrupt */
+	NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+	/* Add to NVIC */
+	NVIC_Init(&NVIC_InitStruct);
+}
+
 /* Input Signals GPIO pins on CLK -> PC0, RD -> PC1, WR -> PC2 */
 void config_gpio_sig(void) {
 	/* GPIOC Periph clock enable */
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
 
 	/* Configure GPIO Settings */
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_Init(GPIOC, &GPIO_InitStructure);
 }
 
@@ -77,8 +112,8 @@ void config_gpio_data(void) {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
 
 	/* Configure GPIO Settings */
-	GPIO_InitStructure.GPIO_Pin = 
-		GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 | 
+	GPIO_InitStructure.GPIO_Pin =
+		GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 |
 		GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -93,10 +128,10 @@ void config_gpio_addr(void) {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
 
 	/* Configure GPIO Settings */
-	GPIO_InitStructure.GPIO_Pin = 
-		GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | 
-		GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7 | 
-		GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 | 
+	GPIO_InitStructure.GPIO_Pin =
+		GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 |
+		GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7 |
+		GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 |
 		GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -132,6 +167,7 @@ int main(void) {
 	config_gpio_dbg();
 	*/
 	config_PC0_int();
+	config_PC3_int();
 	/* PB{12..15} for external flash rom */
 
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
@@ -144,11 +180,11 @@ int main(void) {
 	GPIO_PinAFConfig(GPIOA , GPIO_PinSource2 , GPIO_AF_USART2);
 	GPIO_PinAFConfig(GPIOA , GPIO_PinSource3 , GPIO_AF_USART2);
 	//GPIOAのPIN2を出力に設定
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3; 
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF; 
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP; 
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP; 
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz; 
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
 	// GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3 ;
 	// GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
@@ -178,17 +214,17 @@ int main(void) {
 	/* Add to NVIC */
 	NVIC_Init(&NVIC_InitStruct);
 	USART_ClearITPendingBit(USART2, USART_IT_RXNE);
-	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE); 
+	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
 
 	//USART2を有効化
 	USART_Cmd(USART2, ENABLE);
 
 	/* Set initial cartridge settings */
-	rom_bank = 0x00;
+	rom_bank = 0x01;
 	ram_bank = 0x00;
 	ram_enable = 0x00;
 	rom_ram_mode = 0x00;
-	
+
 	no_show_logo = 0;
 
 	while (1) {}

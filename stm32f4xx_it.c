@@ -6,9 +6,9 @@
   * @brief   Interrupt handlers.
   *          The interrupt handler for the rising flag trigger is defined here.
   *          It handles the read and write operations of the gameboy to the
-  *          cartridge.  
+  *          cartridge.
   ******************************************************************************
-  */ 
+  */
 
 #include "stm32f4xx_it.h"
 #include "repeat.h"
@@ -40,7 +40,7 @@
 
 #define GB_ROM_ADDR 0x08100000
 
-/* 
+/*
  * Macros to relate the GPIO and the functionality
  */
 #define BUS_RD (GPIOC->IDR & 0x0002)
@@ -55,12 +55,12 @@
 /* Defines wether to show the Nintendo logo or the custom logo */
 uint8_t no_show_logo;
 
-uint16_t rom_bank = 0x01; 
+uint16_t rom_bank = 0x01;
 uint8_t ram_bank;
 uint8_t ram_enable;
 uint8_t rom_ram_mode;
 
-uint8_t ram[0x20000]; // 32K
+uint8_t ram[0x20000] = {0xFF}; // 32K
 uint8_t ram_uart_ptr = 0x00;
 
 /* Write cartridge operation for MBC1 */
@@ -95,10 +95,10 @@ inline void mbc1_write(uint16_t addr, uint8_t data) {
 		}
 	} else if (addr < 0x8000) {
 		/* ROM/RAM Mode Select */
-		if (data) { 
+		if (data) {
 			/* Emable RAM Banking mode */
 			rom_ram_mode = 1;
-		} else { 
+		} else {
 			/* Emable ROM Banking mode */
 			rom_ram_mode = 0;
 		}
@@ -144,10 +144,10 @@ inline uint8_t mbc1_read(uint16_t addr) {
 void EXTI0_IRQHandler(void) {
 	uint16_t addr;
 	uint8_t data;
-	
+
 	uint32_t enablestatus;
 	enablestatus =  EXTI->IMR & EXTI_Line0;
-	
+
 	if (((EXTI->PR & EXTI_Line0) != (uint32_t)RESET) &&
 	    (enablestatus != (uint32_t)RESET)) {
 		/* Do stuff on trigger */
@@ -156,10 +156,10 @@ void EXTI0_IRQHandler(void) {
 		REP(1,0,asm("NOP"););
 		/* Read ADDR from the bus */
 		addr = ADDR_IN;
-		
+
 		if (BUS_RD || !BUS_WR) {
 			/* Write operation */
-			
+
 			/* Wait 30 NOPs, until the DATA is ready in the bus */
 			REP(3,0,asm("NOP"););
 			/* Read DATA from the bus */
@@ -168,7 +168,7 @@ void EXTI0_IRQHandler(void) {
 			mbc1_write(addr, data);
 		} else {
 			/* Read operation */
-			
+
 			/* Set the GPIOE in output mode */
 			SET_DATA_MODE_OUT;
 			/* Output the data read at addr through GPIOE */
@@ -183,6 +183,20 @@ void EXTI0_IRQHandler(void) {
 	/* Clear interrupt flag */
 	EXTI->PR = EXTI_Line0;
 	//EXTI_ClearITPendingBit(EXTI_Line0);
+}
+
+void EXTI3_IRQHandler(void) {
+	uint16_t addr;
+	uint8_t data;
+
+	uint32_t enablestatus;
+	enablestatus =  EXTI->IMR & EXTI_Line3;
+
+	if (((EXTI->PR & EXTI_Line3) != (uint32_t)RESET) &&
+	    (enablestatus != (uint32_t)RESET)) {
+		ram[0] = 0xFF;
+	}
+	EXTI->PR = EXTI_Line3;
 }
 
 void USART2_IRQHandler(void) {
