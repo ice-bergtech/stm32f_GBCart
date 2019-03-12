@@ -39,6 +39,7 @@
 #include "dhole2_logo.h"
 
 #define GB_ROM_ADDR 0x08100000
+#define GB_RAM_ADDR 0x080E0000
 
 /*
  * Macros to relate the GPIO and the functionality
@@ -186,15 +187,21 @@ void EXTI0_IRQHandler(void) {
 }
 
 void EXTI3_IRQHandler(void) {
-	uint16_t addr;
-	uint8_t data;
-
 	uint32_t enablestatus;
 	enablestatus =  EXTI->IMR & EXTI_Line3;
 
 	if (((EXTI->PR & EXTI_Line3) != (uint32_t)RESET) &&
 	    (enablestatus != (uint32_t)RESET)) {
-		ram[0] = 0xFF;
+		FLASH_Unlock();
+
+		/* Clear All pending flags */
+		FLASH_ClearFlag( FLASH_FLAG_EOP | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR);
+		FLASH_EraseSector(FLASH_Sector_11, VoltageRange_3);
+
+		for(unsigned int i = 0; i < 0x20000; i++){
+			FLASH_ProgramByte(GB_RAM_ADDR+i, ram[i]);
+		}
+		FLASH_Lock();
 	}
 	EXTI->PR = EXTI_Line3;
 }
